@@ -1,4 +1,4 @@
-# PPC — Prompt Policy Compiler (v0.2.0)
+# PPC — Prompt Policy Compiler (v0.3.0)
 
 PPC compiles small Markdown behavior modules into a single deterministic prompt (stdout-first).
 
@@ -8,7 +8,7 @@ PPC compiles small Markdown behavior modules into a single deterministic prompt 
 
 ```bash
 # Install
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.2.0
+go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.0
 
 # Compile a prompt
 ppc explore --creative --out my-prompt.md
@@ -27,7 +27,7 @@ ppc --list
 1. Download for your platform:
    ```bash
    curl -fsSL -o ppc.tar.gz \
-     https://github.com/bkuri/ppc/releases/download/v0.2.0/ppc_v0.2.0_linux_amd64.tar.gz
+     https://github.com/bkuri/ppc/releases/download/v0.3.0/ppc_v0.3.0_linux_amd64.tar.gz
    ```
 
 2. Extract and install:
@@ -50,13 +50,13 @@ Always verify release integrity:
 
 ```bash
 # Download checksums
-curl -fsSL -O https://github.com/bkuri/ppc/releases/download/v0.2.0/checksums.txt
+curl -fsSL -O https://github.com/bkuri/ppc/releases/download/v0.3.0/checksums.txt
 
 # Verify your downloaded archive
 sha256sum -c --ignore-missing checksums.txt
 ```
 
-Should output: `ppc_v0.2.0_linux_amd64.tar.gz: OK`
+Should output: `ppc_v0.3.0_linux_amd64.tar.gz: OK`
 
 See [docs/verification.md](docs/verification.md) for detailed verification guide.
 
@@ -65,7 +65,7 @@ See [docs/verification.md](docs/verification.md) for detailed verification guide
 Pin to specific version for reproducibility:
 
 ```bash
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.2.0
+go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.0
 ```
 
 The binary installs to `$GOPATH/bin/ppc` (usually `~/go/bin/ppc`).
@@ -96,7 +96,7 @@ PPC follows semantic versioning: `vX.Y.Z`
 
 To install a specific version, use:
 ```bash
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.2.0
+go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.0
 ```
 
 Check for latest releases at:
@@ -133,6 +133,18 @@ cd examples/01-basic-prompt
 ppc doctor                    # Validate structure
 ppc explore --profile explore-creative | head -20
 ```
+
+## Modes
+
+PPC uses three modes aligned with the software lifecycle:
+
+| Mode | Use When | One-liner |
+|------|----------|-----------|
+| `explore` | Researching, recommending, answering questions | "What's the best approach?" |
+| `build` | Implementing, coding, making changes | "Make it work." |
+| `ship` | Releasing, deploying, finalizing | "Don't break anything." |
+
+See [docs/modes.md](docs/modes.md) for detailed mode guide and selection flowchart.
 
 ## Subcommands
 
