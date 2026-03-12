@@ -2,6 +2,7 @@ package tests
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,9 +12,11 @@ import (
 	"github.com/bkuri/ppc/internal/model"
 )
 
+var promptsDir = filepath.Join("..", "prompts")
+
 func TestGraphDeterministic(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	t.Logf("TestGraphDeterministic: loaded %d modules", len(modByID))
 	reachable := computeReachable(modByID)
 
@@ -26,8 +29,8 @@ func TestGraphDeterministic(t *testing.T) {
 }
 
 func TestGraphValidDOT(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	t.Logf("TestGraphValidDOT: loaded %d modules", len(modByID))
 	reachable := computeReachable(modByID)
 
@@ -42,8 +45,8 @@ func TestGraphValidDOT(t *testing.T) {
 }
 
 func TestGraphContainsAllModules(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	reachable := computeReachable(modByID)
 
 	dot := graph.BuildDOT(modByID, rules, reachable)
@@ -56,8 +59,8 @@ func TestGraphContainsAllModules(t *testing.T) {
 }
 
 func TestGraphUnreachableStyled(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	reachable := computeReachable(modByID)
 
 	dot := graph.BuildDOT(modByID, rules, reachable)
@@ -73,8 +76,8 @@ func TestGraphUnreachableStyled(t *testing.T) {
 }
 
 func TestGraphEntrypointsStyled(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	reachable := computeReachable(modByID)
 
 	dot := graph.BuildDOT(modByID, rules, reachable)
@@ -88,8 +91,8 @@ func TestGraphEntrypointsStyled(t *testing.T) {
 }
 
 func TestGraphGoldenSnapshot(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	reachable := computeReachable(modByID)
 
 	dot := graph.BuildDOT(modByID, rules, reachable)
@@ -106,8 +109,8 @@ func TestGraphGoldenSnapshot(t *testing.T) {
 }
 
 func TestGraphHasAllLayerClusters(t *testing.T) {
-	modByID, _ := loader.LoadModules("prompts")
-	rules, _ := loader.LoadRules("prompts")
+	modByID, _ := loader.LoadModules(promptsDir)
+	rules, _ := loader.LoadRules(promptsDir)
 	reachable := computeReachable(modByID)
 
 	dot := graph.BuildDOT(modByID, rules, reachable)
