@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/bkuri/ppc/internal/compile"
 	"github.com/bkuri/ppc/internal/doctor"
+	"github.com/bkuri/ppc/internal/lint"
 	"github.com/bkuri/ppc/internal/loader"
 )
 
@@ -15,6 +18,20 @@ import (
 func dief(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(2)
+}
+
+func parseCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 // explainOutput prints compilation metadata to stderr (CLI concern)
@@ -251,6 +268,7 @@ func printGlobalUsage() {
   build      Generate prompt for build mode
   ship       Generate prompt for shipping mode
   doctor     Validate module structure and dependencies
+  lint       Check prompt policies against lint rules
 
  global flags:
   --list     List all available modules
@@ -262,6 +280,7 @@ func printGlobalUsage() {
   ppc build --conservative --revisions 1 --contract code --explain
   ppc ship --creative --out AGENTS.md --hash
   ppc doctor --strict --json
+  ppc lint --max-words 2000 --require-tags domain:*
 
  run 'ppc <subcommand> --help' for subcommand-specific options`)
 }
@@ -344,6 +363,74 @@ flags:`)
 		}
 		fs.Parse(args)
 		os.Exit(doctor.RunDoctor(*proDir, *strict, *jsonOut, *withStats, *graphOut, *outPath))
+
+	case "lint":
+		fs := flag.NewFlagSet("lint", flag.ExitOnError)
+		maxWords := fs.Int("max-words", 0, "maximum total word count (0=disabled)")
+		maxLines := fs.Int("max-lines", 0, "maximum total line count (0=disabled)")
+		maxModules := fs.Int("max-modules", 0, "maximum number of modules (0=disabled)")
+		maxModuleWords := fs.Int("max-module-words", 0, "maximum words per module (0=disabled)")
+		maxDepth := fs.Int("max-depth", 0, "maximum dependency depth (0=disabled)")
+		requireTags := fs.String("require-tags", "", "comma-separated list of required tags")
+		forbidTags := fs.String("forbid-tags", "", "comma-separated list of forbidden tags")
+		requireFields := fs.String("require-fields", "", "comma-separated list of required frontmatter fields")
+		forbidEmptyBody := fs.Bool("forbid-empty-body", false, "fail if any module has empty body")
+		jsonOut := fs.Bool("json", false, "output machine-readable JSON")
+		proDir := fs.String("prompts", promptsDir, "prompts directory")
+		fs.Usage = func() {
+			fmt.Fprintln(os.Stderr, `usage:
+  ppc lint [flags]
+
+Checks prompt policies against configurable lint rules.
+
+flags:`)
+			fs.PrintDefaults()
+		}
+		fs.Parse(args)
+
+		cfg := lint.Config{
+			MaxWords:        *maxWords,
+			MaxLines:        *maxLines,
+			MaxModules:      *maxModules,
+			MaxModuleWords:  *maxModuleWords,
+			MaxDepth:        *maxDepth,
+			RequireTags:     parseCSV(*requireTags),
+			ForbidTags:      parseCSV(*forbidTags),
+			RequireFields:   parseCSV(*requireFields),
+			ForbidEmptyBody: *forbidEmptyBody,
+		}
+
+		result, err := lint.Run(*proDir, cfg)
+		if err != nil {
+			dief("lint error: %v", err)
+		}
+
+		if *jsonOut {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(result); err != nil {
+				dief("JSON encode error: %v", err)
+			}
+			if len(result.Violations) > 0 {
+				os.Exit(2)
+			}
+			os.Exit(0)
+		}
+
+		if len(result.Violations) == 0 {
+			fmt.Println("lint: OK")
+			os.Exit(0)
+		}
+
+		fmt.Printf("lint: %d issue(s)\n", len(result.Violations))
+		for _, v := range result.Violations {
+			if v.Module != "" {
+				fmt.Printf("  - [%s] %s: %s (%s)\n", v.Level, v.Rule, v.Message, v.Module)
+			} else {
+				fmt.Printf("  - [%s] %s: %s\n", v.Level, v.Rule, v.Message)
+			}
+		}
+		os.Exit(2)
 
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", subcommand)
