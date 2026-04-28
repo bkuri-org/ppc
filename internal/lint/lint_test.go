@@ -336,3 +336,257 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
+
+func TestMergeConfig(t *testing.T) {
+	file := model.LintConfig{
+		MaxWords:       2000,
+		MaxModuleWords: 500,
+		ForbidEmptyBody: true,
+		RequireTags:    []string{"risk:*"},
+		RequireFields:  []string{"desc"},
+		ForbidContentPatterns: []model.LintContentPattern{
+			{Match: "TODO", Reason: "no TODOs"},
+		},
+	}
+
+	t.Run("file defaults when CLI is zero", func(t *testing.T) {
+		cli := Config{}
+		merged := MergeConfig(file, cli)
+		if merged.MaxWords != 2000 {
+			t.Errorf("MaxWords = %d, want 2000", merged.MaxWords)
+		}
+		if merged.MaxModuleWords != 500 {
+			t.Errorf("MaxModuleWords = %d, want 500", merged.MaxModuleWords)
+		}
+		if !merged.ForbidEmptyBody {
+			t.Error("ForbidEmptyBody should be true")
+		}
+		if len(merged.RequireTags) != 1 || merged.RequireTags[0] != "risk:*" {
+			t.Errorf("RequireTags = %v, want [risk:*]", merged.RequireTags)
+		}
+		if len(merged.ForbidContentPatterns) != 1 {
+			t.Errorf("ForbidContentPatterns count = %d, want 1", len(merged.ForbidContentPatterns))
+		}
+	})
+
+	t.Run("CLI overrides file defaults", func(t *testing.T) {
+		cli := Config{MaxWords: 5000}
+		merged := MergeConfig(file, cli)
+		if merged.MaxWords != 5000 {
+			t.Errorf("MaxWords = %d, want 5000", merged.MaxWords)
+		}
+		if !merged.ForbidEmptyBody {
+			t.Error("ForbidEmptyBody should be true (file default, CLI not set)")
+		}
+	})
+
+	t.Run("CLI can enable forbid empty body", func(t *testing.T) {
+		file := model.LintConfig{ForbidEmptyBody: false}
+		cli := Config{ForbidEmptyBody: true}
+		merged := MergeConfig(file, cli)
+		if !merged.ForbidEmptyBody {
+			t.Error("ForbidEmptyBody should be true (CLI enabled)")
+		}
+	})
+
+	t.Run("CLI tags override file tags", func(t *testing.T) {
+		cli := Config{RequireTags: []string{"tone:*"}}
+		merged := MergeConfig(file, cli)
+		if len(merged.RequireTags) != 1 || merged.RequireTags[0] != "tone:*" {
+			t.Errorf("RequireTags = %v, want [tone:*]", merged.RequireTags)
+		}
+	})
+
+	t.Run("CLI content patterns override file", func(t *testing.T) {
+		cli := Config{
+			ForbidContentPatterns: []ContentPattern{
+				{Match: "FIXME", Reason: "custom"},
+			},
+		}
+		merged := MergeConfig(file, cli)
+		if len(merged.ForbidContentPatterns) != 1 {
+			t.Errorf("ForbidContentPatterns count = %d, want 1", len(merged.ForbidContentPatterns))
+		}
+		if merged.ForbidContentPatterns[0].Match != "FIXME" {
+			t.Errorf("Match = %q, want FIXME", merged.ForbidContentPatterns[0].Match)
+		}
+	})
+}
+
+func TestMatchGlob(t *testing.T) {
+	tests := []struct {
+		path     string
+		pattern  string
+		expected bool
+	}{
+		{"testdata/base.md", "testdata/base.md", true},
+		{"testdata/base.md", "testdata/*.md", true},
+		{"testdata/base.md", "testdata/*.txt", false},
+		{"testdata/modes_test.md", "testdata/*_test.md", true},
+		{"testdata/base.md", "**", true},
+		{"testdata/base.md", "**/*.md", true},
+		{"testdata/sub/deep/file.md", "**/*.md", true},
+		{"testdata/base.md", "testdata/**", true},
+		{"testdata/sub/deep/file.md", "testdata/**", true},
+		{"testdata/base.md", "other/**", false},
+		{"testdata/base.md", "testdata/sub/**", false},
+		{"", "", false},
+	}
+
+	for _, tc := range tests {
+		got := matchGlob(tc.path, tc.pattern)
+		if got != tc.expected {
+			t.Errorf("matchGlob(%q, %q) = %v, want %v", tc.path, tc.pattern, got, tc.expected)
+		}
+	}
+}
+
+func TestRunForbidContent(t *testing.T) {
+	t.Run("match found", func(t *testing.T) {
+		cfg := Config{
+			ForbidContentPatterns: []ContentPattern{
+				{Match: "base module", Reason: "no base module references"},
+			},
+		}
+		result, err := Run("testdata", cfg)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		found := false
+		for _, v := range result.Violations {
+			if v.Rule == "forbid_content" && v.Module == "base" {
+				found = true
+				if v.Message != "no base module references" {
+					t.Errorf("Message = %q, want %q", v.Message, "no base module references")
+				}
+				break
+			}
+		}
+		if !found {
+			t.Error("expected forbid_content violation for base")
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		cfg := Config{
+			ForbidContentPatterns: []ContentPattern{
+				{Match: "ZIGZAG_NONEXISTENT_PATTERN", Reason: "impossible match"},
+			},
+		}
+		result, err := Run("testdata", cfg)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		for _, v := range result.Violations {
+			if v.Rule == "forbid_content" {
+				t.Error("unexpected forbid_content violation")
+			}
+		}
+	})
+
+	t.Run("scoped by paths", func(t *testing.T) {
+		cfg := Config{
+			ForbidContentPatterns: []ContentPattern{
+				{Match: ".", Reason: "matches everything", Paths: []string{"testdata/traits_*"}},
+			},
+		}
+		result, err := Run("testdata", cfg)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		for _, v := range result.Violations {
+			if v.Rule == "forbid_content" && v.Module == "base" {
+				t.Error("forbid_content should not match base (scoped to traits_*)")
+			}
+		}
+
+		found := false
+		for _, v := range result.Violations {
+			if v.Rule == "forbid_content" && v.Module == "traits/deep1" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("expected forbid_content violation for traits/deep1 (in scope)")
+		}
+	})
+
+	t.Run("invalid regex reports error", func(t *testing.T) {
+		cfg := Config{
+			ForbidContentPatterns: []ContentPattern{
+				{Match: "[invalid", Reason: "bad regex"},
+			},
+		}
+		result, err := Run("testdata", cfg)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		found := false
+		for _, v := range result.Violations {
+			if v.Rule == "forbid_content" && contains(v.Message, "invalid pattern") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("expected forbid_content violation for invalid regex")
+		}
+	})
+}
+
+func TestMatchPaths(t *testing.T) {
+	t.Run("empty paths matches nothing", func(t *testing.T) {
+		if matchPaths("testdata/base.md", nil) {
+			t.Error("nil paths should not match")
+		}
+		if matchPaths("testdata/base.md", []string{}) {
+			t.Error("empty paths should not match")
+		}
+	})
+
+	t.Run("any matching pattern returns true", func(t *testing.T) {
+		if !matchPaths("testdata/base.md", []string{"other/*", "testdata/*.md"}) {
+			t.Error("should match second pattern")
+		}
+	})
+}
+
+func TestResolveScope(t *testing.T) {
+	cfg := Config{
+		MaxModuleWords: 1000,
+		ForbidEmptyBody: true,
+		RequireFields:  []string{"id"},
+		ForbidTags:     []string{"deprecated"},
+	}
+
+	scope := resolveScope("testdata/base.md", cfg)
+	if scope.MaxModuleWords != 1000 {
+		t.Errorf("MaxModuleWords = %d, want 1000", scope.MaxModuleWords)
+	}
+	if !scope.ForbidEmptyBody {
+		t.Error("ForbidEmptyBody should be true")
+	}
+	if len(scope.RequireFields) != 1 || scope.RequireFields[0] != "id" {
+		t.Errorf("RequireFields = %v, want [id]", scope.RequireFields)
+	}
+	if len(scope.ForbidTags) != 1 || scope.ForbidTags[0] != "deprecated" {
+		t.Errorf("ForbidTags = %v, want [deprecated]", scope.ForbidTags)
+	}
+}
+
+func TestMergeConfigEmptyFile(t *testing.T) {
+	file := model.LintConfig{}
+	cli := Config{MaxWords: 5000}
+	merged := MergeConfig(file, cli)
+	if merged.MaxWords != 5000 {
+		t.Errorf("MaxWords = %d, want 5000", merged.MaxWords)
+	}
+	if merged.ForbidEmptyBody {
+		t.Error("ForbidEmptyBody should be false")
+	}
+}

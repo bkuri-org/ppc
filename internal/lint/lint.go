@@ -2,6 +2,9 @@ package lint
 
 import (
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/bkuri/ppc/internal/loader"
@@ -9,15 +12,22 @@ import (
 )
 
 type Config struct {
-	MaxWords        int
-	MaxLines        int
-	MaxModules      int
-	MaxModuleWords  int
-	MaxDepth        int
-	RequireTags     []string
-	ForbidTags      []string
-	RequireFields   []string
-	ForbidEmptyBody bool
+	MaxWords               int
+	MaxLines               int
+	MaxModules             int
+	MaxModuleWords         int
+	MaxDepth               int
+	RequireTags            []string
+	ForbidTags             []string
+	RequireFields          []string
+	ForbidEmptyBody        bool
+	ForbidContentPatterns  []ContentPattern
+}
+
+type ContentPattern struct {
+	Match  string
+	Reason string
+	Paths  []string
 }
 
 type Violation struct {
@@ -30,6 +40,63 @@ type Violation struct {
 type Result struct {
 	Violations []Violation    `json:"violations"`
 	Stats      map[string]int `json:"stats"`
+}
+
+func MergeConfig(file model.LintConfig, cli Config) Config {
+	merged := Config{
+		MaxWords:      coalesceInt(file.MaxWords, cli.MaxWords),
+		MaxLines:      coalesceInt(file.MaxLines, cli.MaxLines),
+		MaxModules:    coalesceInt(file.MaxModules, cli.MaxModules),
+		MaxModuleWords: coalesceInt(file.MaxModuleWords, cli.MaxModuleWords),
+		MaxDepth:      coalesceInt(file.MaxDepth, cli.MaxDepth),
+		ForbidEmptyBody: coalesceBool(file.ForbidEmptyBody, cli.ForbidEmptyBody),
+	}
+
+	if len(cli.RequireTags) > 0 {
+		merged.RequireTags = cli.RequireTags
+	} else if len(file.RequireTags) > 0 {
+		merged.RequireTags = file.RequireTags
+	}
+
+	if len(cli.ForbidTags) > 0 {
+		merged.ForbidTags = cli.ForbidTags
+	} else if len(file.ForbidTags) > 0 {
+		merged.ForbidTags = file.ForbidTags
+	}
+
+	if len(cli.RequireFields) > 0 {
+		merged.RequireFields = cli.RequireFields
+	} else if len(file.RequireFields) > 0 {
+		merged.RequireFields = file.RequireFields
+	}
+
+	if len(cli.ForbidContentPatterns) > 0 {
+		merged.ForbidContentPatterns = cli.ForbidContentPatterns
+	} else if len(file.ForbidContentPatterns) > 0 {
+		for _, p := range file.ForbidContentPatterns {
+			merged.ForbidContentPatterns = append(merged.ForbidContentPatterns, ContentPattern{
+				Match:  p.Match,
+				Reason: p.Reason,
+				Paths:  p.Paths,
+			})
+		}
+	}
+
+	return merged
+}
+
+func coalesceInt(file, cli int) int {
+	if cli != 0 {
+		return cli
+	}
+	return file
+}
+
+func coalesceBool(file, cli bool) bool {
+	if cli {
+		return true
+	}
+	return file
 }
 
 func Run(promptsDir string, cfg Config) (*Result, error) {
@@ -69,7 +136,6 @@ func Run(promptsDir string, cfg Config) (*Result, error) {
 			Level:   "WARN",
 			Rule:    "max_words",
 			Message: fmt.Sprintf("word count (%d) exceeds threshold (%d) by %d%%", totalWords, cfg.MaxWords, pct),
-			Module:  "",
 		})
 	}
 
@@ -79,7 +145,6 @@ func Run(promptsDir string, cfg Config) (*Result, error) {
 			Level:   "WARN",
 			Rule:    "max_lines",
 			Message: fmt.Sprintf("line count (%d) exceeds threshold (%d) by %d%%", totalLines, cfg.MaxLines, pct),
-			Module:  "",
 		})
 	}
 
@@ -89,56 +154,7 @@ func Run(promptsDir string, cfg Config) (*Result, error) {
 			Level:   "WARN",
 			Rule:    "max_modules",
 			Message: fmt.Sprintf("module count (%d) exceeds threshold (%d) by %d%%", len(modByID), cfg.MaxModules, pct),
-			Module:  "",
 		})
-	}
-
-	for id, m := range modByID {
-		if cfg.MaxModuleWords > 0 {
-			words := countWords(m.Body)
-			if words > cfg.MaxModuleWords {
-				pct := percentOver(words, cfg.MaxModuleWords)
-				result.Violations = append(result.Violations, Violation{
-					Level:   "WARN",
-					Rule:    "max_module_words",
-					Message: fmt.Sprintf("word count (%d) exceeds threshold (%d) by %d%%", words, cfg.MaxModuleWords, pct),
-					Module:  id,
-				})
-			}
-		}
-
-		if cfg.ForbidEmptyBody && strings.TrimSpace(m.Body) == "" {
-			result.Violations = append(result.Violations, Violation{
-				Level:   "WARN",
-				Rule:    "forbid_empty_body",
-				Message: "module has empty body",
-				Module:  id,
-			})
-		}
-
-		for _, field := range cfg.RequireFields {
-			if !hasField(m.Front, field) {
-				result.Violations = append(result.Violations, Violation{
-					Level:   "WARN",
-					Rule:    "require_fields",
-					Message: "missing required field '" + field + "'",
-					Module:  id,
-				})
-			}
-		}
-
-		for _, ft := range cfg.ForbidTags {
-			for _, t := range m.Front.Tags {
-				if t == ft {
-					result.Violations = append(result.Violations, Violation{
-						Level:   "WARN",
-						Rule:    "forbid_tags",
-						Message: "module has forbidden tag '" + ft + "'",
-						Module:  id,
-					})
-				}
-			}
-		}
 	}
 
 	if len(cfg.RequireTags) > 0 {
@@ -152,7 +168,6 @@ func Run(promptsDir string, cfg Config) (*Result, error) {
 					Level:   "WARN",
 					Rule:    "require_tags",
 					Message: "no module has required tag pattern '" + pattern + "'",
-					Module:  "",
 				})
 			}
 		}
@@ -172,7 +187,164 @@ func Run(promptsDir string, cfg Config) (*Result, error) {
 		}
 	}
 
+	sortedIDs := make([]string, 0, len(modByID))
+	for id := range modByID {
+		sortedIDs = append(sortedIDs, id)
+	}
+	sort.Strings(sortedIDs)
+
+	for _, id := range sortedIDs {
+		m := modByID[id]
+		scope := resolveScope(m.Path, cfg)
+
+		if scope.MaxModuleWords > 0 {
+			words := countWords(m.Body)
+			if words > scope.MaxModuleWords {
+				pct := percentOver(words, scope.MaxModuleWords)
+				result.Violations = append(result.Violations, Violation{
+					Level:   "WARN",
+					Rule:    "max_module_words",
+					Message: fmt.Sprintf("word count (%d) exceeds threshold (%d) by %d%%", words, scope.MaxModuleWords, pct),
+					Module:  id,
+				})
+			}
+		}
+
+		if scope.ForbidEmptyBody && strings.TrimSpace(m.Body) == "" {
+			result.Violations = append(result.Violations, Violation{
+				Level:   "WARN",
+				Rule:    "forbid_empty_body",
+				Message: "module has empty body",
+				Module:  id,
+			})
+		}
+
+		for _, field := range scope.RequireFields {
+			if !hasField(m.Front, field) {
+				result.Violations = append(result.Violations, Violation{
+					Level:   "WARN",
+					Rule:    "require_fields",
+					Message: "missing required field '" + field + "'",
+					Module:  id,
+				})
+			}
+		}
+
+		for _, ft := range scope.ForbidTags {
+			for _, t := range m.Front.Tags {
+				if t == ft {
+					result.Violations = append(result.Violations, Violation{
+						Level:   "WARN",
+						Rule:    "forbid_tags",
+						Message: "module has forbidden tag '" + ft + "'",
+						Module:  id,
+					})
+				}
+			}
+		}
+
+		for _, cp := range cfg.ForbidContentPatterns {
+			if len(cp.Paths) > 0 && !matchPaths(m.Path, cp.Paths) {
+				continue
+			}
+			re, err := regexp.Compile(cp.Match)
+			if err != nil {
+				result.Violations = append(result.Violations, Violation{
+					Level:   "WARN",
+					Rule:    "forbid_content",
+					Message: fmt.Sprintf("invalid pattern %q: %v", cp.Match, err),
+					Module:  id,
+				})
+				continue
+			}
+			if re.MatchString(m.Body) {
+				result.Violations = append(result.Violations, Violation{
+					Level:   "WARN",
+					Rule:    "forbid_content",
+					Message: cp.Reason,
+					Module:  id,
+				})
+			}
+		}
+	}
+
 	return result, nil
+}
+
+type resolvedScope struct {
+	MaxModuleWords int
+	ForbidEmptyBody bool
+	RequireFields  []string
+	ForbidTags     []string
+}
+
+func resolveScope(modPath string, cfg Config) resolvedScope {
+	scoped := resolvedScope{
+		MaxModuleWords: cfg.MaxModuleWords,
+		ForbidEmptyBody: cfg.ForbidEmptyBody,
+		RequireFields:  cfg.RequireFields,
+		ForbidTags:     cfg.ForbidTags,
+	}
+
+	return scoped
+}
+
+func matchPaths(modPath string, patterns []string) bool {
+	for _, pat := range patterns {
+		if matchGlob(modPath, pat) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchGlob(path, pattern string) bool {
+	if pattern == "" {
+		return false
+	}
+	if pattern == "**" {
+		return true
+	}
+
+	relPath := filepath.ToSlash(path)
+	relPat := filepath.ToSlash(pattern)
+
+	parts := strings.Split(relPat, "/")
+	pathParts := strings.Split(relPath, "/")
+
+	return globMatch(pathParts, parts)
+}
+
+func globMatch(pathParts, patParts []string) bool {
+	if len(patParts) == 0 {
+		return len(pathParts) == 0
+	}
+
+	seg := patParts[0]
+	rest := patParts[1:]
+
+	if seg == "**" {
+		if len(rest) == 0 {
+			return true
+		}
+		for i := 0; i <= len(pathParts); i++ {
+			if globMatch(pathParts[i:], rest) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if len(pathParts) == 0 {
+		return false
+	}
+
+	matched, _ := filepath.Match(seg, pathParts[0])
+	if !matched {
+		return false
+	}
+
+	return globMatch(pathParts[1:], rest)
 }
 
 func countWords(s string) int {
@@ -220,10 +392,10 @@ func calculateModuleDepth(modByID map[string]*model.Module, startID string) (int
 			if p == id {
 				return len(path), append(path, id)
 			}
-		}
 
-		if d, exists := depthMemo[id]; exists {
-			return d, chainMemo[id]
+			if d, exists := depthMemo[id]; exists {
+				return d, chainMemo[id]
+			}
 		}
 
 		m, ok := modByID[id]

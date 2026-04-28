@@ -12,6 +12,7 @@ import (
 	"github.com/bkuri/ppc/internal/doctor"
 	"github.com/bkuri/ppc/internal/lint"
 	"github.com/bkuri/ppc/internal/loader"
+	"github.com/bkuri/ppc/internal/model"
 )
 
 // dief prints error to stderr and exits
@@ -375,6 +376,7 @@ flags:`)
 		forbidTags := fs.String("forbid-tags", "", "comma-separated list of forbidden tags")
 		requireFields := fs.String("require-fields", "", "comma-separated list of required frontmatter fields")
 		forbidEmptyBody := fs.Bool("forbid-empty-body", false, "fail if any module has empty body")
+		forbidContent := fs.String("forbid-content", "", "regex pattern forbidden in module bodies")
 		jsonOut := fs.Bool("json", false, "output machine-readable JSON")
 		proDir := fs.String("prompts", promptsDir, "prompts directory")
 		fs.Usage = func() {
@@ -388,7 +390,7 @@ flags:`)
 		}
 		fs.Parse(args)
 
-		cfg := lint.Config{
+		cliCfg := lint.Config{
 			MaxWords:        *maxWords,
 			MaxLines:        *maxLines,
 			MaxModules:      *maxModules,
@@ -399,6 +401,19 @@ flags:`)
 			RequireFields:   parseCSV(*requireFields),
 			ForbidEmptyBody: *forbidEmptyBody,
 		}
+
+		if *forbidContent != "" {
+			cliCfg.ForbidContentPatterns = []lint.ContentPattern{
+				{Match: *forbidContent, Reason: "matches --forbid-content pattern"},
+			}
+		}
+
+		fileLint := model.LintConfig{}
+		if rulesIf, _ := loader.LoadRules(*proDir); rulesIf != nil {
+			fileLint = rulesIf.Lint
+		}
+
+		cfg := lint.MergeConfig(fileLint, cliCfg)
 
 		result, err := lint.Run(*proDir, cfg)
 		if err != nil {
