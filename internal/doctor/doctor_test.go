@@ -198,9 +198,9 @@ func TestLayerNameFromIndex(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got := layerNameFromIndex(tc.idx)
+		got := model.LayerName(tc.idx)
 		if got != tc.expected {
-			t.Errorf("layerNameFromIndex(%d) = %q, want %q", tc.idx, got, tc.expected)
+			t.Errorf("LayerName(%d) = %q, want %q", tc.idx, got, tc.expected)
 		}
 	}
 }
@@ -220,7 +220,7 @@ func captureOutputTo(buf *bytes.Buffer, fn func() int) int {
 	exitCode := fn()
 
 	w.Close()
-	io.Copy(buf, r)
+	io.Copy(buf, r) //nolint:errcheck // best-effort capture of stderr for testing
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr
 	r.Close()

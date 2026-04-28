@@ -65,7 +65,7 @@ func calculateStats(modByID map[string]*model.Module, rules *model.Rules, reacha
 	byLayer := map[string]int{"base": 0, "modes": 0, "traits": 0, "policies": 0, "contracts": 0}
 
 	for _, m := range modByID {
-		layerName := layerNameFromIndex(m.Layer)
+		layerName := model.LayerName(m.Layer)
 		byLayer[layerName]++
 	}
 
@@ -101,22 +101,5 @@ func calculateStats(modByID map[string]*model.Module, rules *model.Rules, reacha
 		Tags:        len(tagValues),
 		Groups:      len(rules.ExclusiveGroups),
 		Orphaned:    orphaned,
-	}
-}
-
-func layerNameFromIndex(idx int) string {
-	switch idx {
-	case 0:
-		return "base"
-	case 1:
-		return "modes"
-	case 2:
-		return "traits"
-	case 3:
-		return "policies"
-	case 4:
-		return "contracts"
-	default:
-		return "unknown"
 	}
 }

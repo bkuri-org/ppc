@@ -9,3 +9,6 @@ test:
 
 smoke:
     ./scripts/smoke.sh
+
+lint:
+    golangci-lint run ./...

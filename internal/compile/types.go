@@ -5,6 +5,7 @@ type CompileOptions struct {
 	Mode       string
 	Contract   string
 	Traits     []string
+	Guardrails []string
 	PromptsDir string
 	VarsFile   string
 	Vars       map[string]any
@@ -12,8 +13,9 @@ type CompileOptions struct {
 
 // CompileMeta provides metadata about the compilation
 type CompileMeta struct {
-	SelectedIDs []string // Root selected modules
-	ClosureIDs  []string // After requires expansion
-	Order       []string // Final module order (IDs)
-	Hash        string   // SHA256 of output
+	SelectedIDs    []string
+	ClosureIDs     []string
+	Order          []string
+	Hash           string
+	UnresolvedVars []string
 }

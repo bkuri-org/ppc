@@ -2,7 +2,6 @@ package substitute
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -11,16 +10,18 @@ type Vars map[string]any
 
 var varPattern = regexp.MustCompile(`\{\{([^}]+)\}\}`)
 
-func Substitute(content string, vars Vars) string {
-	return varPattern.ReplaceAllStringFunc(content, func(match string) string {
+func Substitute(content string, vars Vars) (string, []string) {
+	var unresolved []string
+	result := varPattern.ReplaceAllStringFunc(content, func(match string) string {
 		path := strings.TrimSpace(varPattern.FindStringSubmatch(match)[1])
 		val, ok := ResolvePath(vars, path)
 		if !ok {
-			log.Printf("warning: unresolved variable: %s", path)
+			unresolved = append(unresolved, path)
 			return match
 		}
 		return formatValue(val)
 	})
+	return result, unresolved
 }
 
 func ResolvePath(vars Vars, path string) (any, bool) {

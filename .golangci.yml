@@ -1,0 +1,33 @@
+run:
+  timeout: 2m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosec
+    - revive
+    - gosimple
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+      - name: unused-parameter
+
+issues:
+  exclude-rules:
+    # fs.Parse with flag.ExitOnError never returns an error
+    - linters:
+        - errcheck
+      text: "Error return value of `fs.Parse`"
+    # Output files are intentionally world-readable
+    - linters:
+        - gosec
+      text: "G306"
+    # Existing naming conventions use package-prefixed type names
+    - linters:
+        - revive
+      text: "stutters"

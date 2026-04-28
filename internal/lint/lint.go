@@ -24,6 +24,14 @@ type Config struct {
 	ForbidContentPatterns []ContentPattern
 }
 
+type CLISet struct {
+	MaxWords       bool
+	MaxLines       bool
+	MaxModules     bool
+	MaxModuleWords bool
+	MaxDepth       bool
+}
+
 type ContentPattern struct {
 	Match  string
 	Reason string
@@ -42,13 +50,13 @@ type Result struct {
 	Stats      map[string]int `json:"stats"`
 }
 
-func MergeConfig(file model.LintConfig, cli Config) Config {
+func MergeConfig(file model.LintConfig, cli Config, cliSet CLISet) Config {
 	merged := Config{
-		MaxWords:        coalesceInt(file.MaxWords, cli.MaxWords),
-		MaxLines:        coalesceInt(file.MaxLines, cli.MaxLines),
-		MaxModules:      coalesceInt(file.MaxModules, cli.MaxModules),
-		MaxModuleWords:  coalesceInt(file.MaxModuleWords, cli.MaxModuleWords),
-		MaxDepth:        coalesceInt(file.MaxDepth, cli.MaxDepth),
+		MaxWords:        coalesceInt(file.MaxWords, cli.MaxWords, cliSet.MaxWords),
+		MaxLines:        coalesceInt(file.MaxLines, cli.MaxLines, cliSet.MaxLines),
+		MaxModules:      coalesceInt(file.MaxModules, cli.MaxModules, cliSet.MaxModules),
+		MaxModuleWords:  coalesceInt(file.MaxModuleWords, cli.MaxModuleWords, cliSet.MaxModuleWords),
+		MaxDepth:        coalesceInt(file.MaxDepth, cli.MaxDepth, cliSet.MaxDepth),
 		ForbidEmptyBody: coalesceBool(file.ForbidEmptyBody, cli.ForbidEmptyBody),
 	}
 
@@ -85,8 +93,8 @@ func MergeConfig(file model.LintConfig, cli Config) Config {
 	return merged
 }
 
-func coalesceInt(file, cli int) int {
-	if cli != 0 {
+func coalesceInt(file, cli int, cliSet bool) int {
+	if cliSet {
 		return cli
 	}
 	return file
@@ -100,9 +108,9 @@ func coalesceBool(file, cli bool) bool {
 }
 
 func Run(promptsDir string, cfg Config) (*Result, error) {
-	modByID, errIf := loader.LoadModules(promptsDir)
-	if errIf != nil {
-		return nil, errIf.(error)
+	modByID, err := loader.LoadModules(promptsDir)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &Result{
@@ -278,7 +286,7 @@ type resolvedScope struct {
 	ForbidTags      []string
 }
 
-func resolveScope(modPath string, cfg Config) resolvedScope {
+func resolveScope(_ string, cfg Config) resolvedScope {
 	scoped := resolvedScope{
 		MaxModuleWords:  cfg.MaxModuleWords,
 		ForbidEmptyBody: cfg.ForbidEmptyBody,

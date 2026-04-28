@@ -6,6 +6,8 @@
 /ppc
 /build-prompt-stripped
 
+/dist/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

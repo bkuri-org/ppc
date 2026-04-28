@@ -2,9 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	compilepkg "github.com/bkuri/ppc/internal/compile"
 	"github.com/bkuri/ppc/internal/loader"
+	"github.com/bkuri/ppc/internal/model"
 	profilepkg "github.com/bkuri/ppc/internal/profile"
 	"github.com/bkuri/ppc/internal/resolver"
 )
@@ -14,6 +19,7 @@ type ResolvedConfig struct {
 	Contract   string
 	Revisions  int
 	Traits     []string
+	Guardrails []string
 	Vars       map[string]any
 	VarsFile   string
 	PromptsDir string
@@ -30,6 +36,7 @@ func NewResolvedConfigFromProfile(profileName string) (*ResolvedConfig, error) {
 		Contract:   profile.Contract,
 		Revisions:  -1,
 		Traits:     profile.Traits,
+		Guardrails: []string{},
 		Vars:       map[string]any{},
 		VarsFile:   "",
 		PromptsDir: "",
@@ -52,13 +59,14 @@ func NewResolvedConfigFromDefaults(mode string, contract string) ResolvedConfig 
 		Contract:   contract,
 		Revisions:  -1,
 		Traits:     []string{},
+		Guardrails: []string{},
 		Vars:       map[string]any{},
 		VarsFile:   "",
 		PromptsDir: "",
 	}
 }
 
-func (c *ResolvedConfig) ApplyCLIOverrides(conservative, creative, terse, verbose *bool, revisions *int, contract, varsFile *string) (*ResolvedConfig, error) {
+func (c *ResolvedConfig) ApplyCLIOverrides(conservative, creative, terse, verbose *bool, revisions *int, contract, varsFile, guardrails *string) (*ResolvedConfig, error) {
 	cfg := *c
 
 	if conservative != nil && *conservative {
@@ -82,8 +90,40 @@ func (c *ResolvedConfig) ApplyCLIOverrides(conservative, creative, terse, verbos
 	if varsFile != nil && *varsFile != "" {
 		cfg.VarsFile = *varsFile
 	}
+	if guardrails != nil && *guardrails != "" {
+		cfg.Guardrails = parseGuardrails(*guardrails, cfg.PromptsDir)
+	}
 
 	return &cfg, validateExclusiveGroups(cfg.Traits)
+}
+
+// parseGuardrails parses a comma-separated guardrail flag value.
+// If value is "all", auto-discovers all guardrail modules in the prompts directory.
+func parseGuardrails(value string, promptsDir string) []string {
+	if value == "all" {
+		return discoverAllGuardrails(promptsDir)
+	}
+	return parseCSV(value)
+}
+
+func discoverAllGuardrails(promptsDir string) []string {
+	entries, err := os.ReadDir(filepath.Join(promptsDir, "guardrails"))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(strings.ToLower(name), ".md") {
+			continue
+		}
+		out = append(out, strings.TrimSuffix(name, ".md"))
+	}
+	sort.Strings(out)
+	return out
 }
 
 func (c *ResolvedConfig) ToCompileOptions() compilepkg.CompileOptions {
@@ -91,6 +131,7 @@ func (c *ResolvedConfig) ToCompileOptions() compilepkg.CompileOptions {
 		Mode:       c.Mode,
 		Contract:   c.Contract,
 		Traits:     c.Traits,
+		Guardrails: c.Guardrails,
 		PromptsDir: c.PromptsDir,
 		VarsFile:   c.VarsFile,
 		Vars:       c.Vars,
@@ -98,45 +139,24 @@ func (c *ResolvedConfig) ToCompileOptions() compilepkg.CompileOptions {
 }
 
 func validateExclusiveGroups(traits []string) error {
-	modByID, _ := loader.LoadModules("prompts")
-
-	for _, t := range traits {
-		if _, exists := modByID[t]; !exists {
-			continue
-		}
-
-		for _, tag := range modByID[t].Front.Tags {
-			group, val, ok := resolver.ParseKeyedTag(tag)
-			if !ok {
-				continue
-			}
-
-			for _, other := range traits {
-				if other == t {
-					continue
-				}
-
-				otherModule, exists := modByID[other]
-				if !exists {
-					continue
-				}
-
-				for _, otherTag := range otherModule.Front.Tags {
-					otherGroup, otherVal, ok2 := resolver.ParseKeyedTag(otherTag)
-					if !ok2 {
-						continue
-					}
-
-					if otherGroup == group && otherVal != val {
-						return fmt.Errorf("exclusive group %q violated:\n  %s sets %s:%s\n  %s sets %s:%s",
-							group,
-							t, group, val,
-							other, group, otherVal)
-					}
-				}
-			}
-		}
+	modByID, errIf := loader.LoadModules("prompts")
+	if errIf != nil {
+		return fmt.Errorf("loading modules for exclusive group validation: %w", errIf)
 	}
 
-	return nil
+	rules, errIf := loader.LoadRules("prompts")
+	if errIf != nil {
+		return fmt.Errorf("loading rules for exclusive group validation: %w", errIf)
+	}
+
+	var mods []*model.Module
+	for _, t := range traits {
+		m, ok := modByID[t]
+		if !ok {
+			continue
+		}
+		mods = append(mods, m)
+	}
+
+	return resolver.ValidateExclusiveGroups(rules, mods)
 }

@@ -1,3 +1,4 @@
+// Package loader handles loading modules and rules from the filesystem.
 package loader
 
 import (
@@ -16,7 +17,10 @@ import (
 func ListMarkdownFiles(root string) []string {
 	var out []string
 	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
 		if strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
@@ -29,7 +33,7 @@ func ListMarkdownFiles(root string) []string {
 }
 
 // LoadModules loads all module files from promptsDir
-func LoadModules(promptsDir string) (map[string]*model.Module, interface{}) {
+func LoadModules(promptsDir string) (map[string]*model.Module, error) {
 	files := ListMarkdownFiles(promptsDir)
 	modByID := map[string]*model.Module{}
 
@@ -63,7 +67,7 @@ func LoadModules(promptsDir string) (map[string]*model.Module, interface{}) {
 }
 
 // LoadRules loads the rules.yml file from promptsDir
-func LoadRules(promptsDir string) (*model.Rules, interface{}) {
+func LoadRules(promptsDir string) (*model.Rules, error) {
 	p := filepath.Join(promptsDir, "rules.yml")
 	b, err := os.ReadFile(p)
 	if err != nil {

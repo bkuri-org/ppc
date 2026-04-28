@@ -12,11 +12,14 @@ func TestSubstituteSimple(t *testing.T) {
 	}
 
 	content := "Target: {{goals.target}}"
-	result := Substitute(content, vars)
+	result, unresolved := Substitute(content, vars)
 
 	expected := "Target: production"
 	if result != expected {
 		t.Errorf("expected %q, got %q", expected, result)
+	}
+	if len(unresolved) != 0 {
+		t.Errorf("expected no unresolved vars, got %v", unresolved)
 	}
 }
 
@@ -31,11 +34,14 @@ func TestSubstituteNested(t *testing.T) {
 	}
 
 	content := "Name: {{user.profile.name}}, Email: {{user.profile.email}}"
-	result := Substitute(content, vars)
+	result, unresolved := Substitute(content, vars)
 
 	expected := "Name: alice, Email: alice@example.com"
 	if result != expected {
 		t.Errorf("expected %q, got %q", expected, result)
+	}
+	if len(unresolved) != 0 {
+		t.Errorf("expected no unresolved vars, got %v", unresolved)
 	}
 }
 
@@ -45,16 +51,19 @@ func TestSubstituteMissing(t *testing.T) {
 	}
 
 	content := "Known: {{known}}, Unknown: {{missing}}"
-	result := Substitute(content, vars)
+	result, unresolved := Substitute(content, vars)
 
 	if result != "Known: value, Unknown: {{missing}}" {
 		t.Errorf("expected unresolved variable to remain, got %q", result)
+	}
+	if len(unresolved) != 1 || unresolved[0] != "missing" {
+		t.Errorf("expected unresolved [missing], got %v", unresolved)
 	}
 }
 
 func TestSubstituteString(t *testing.T) {
 	vars := Vars{"name": "test"}
-	result := Substitute("Hello {{name}}", vars)
+	result, _ := Substitute("Hello {{name}}", vars)
 	if result != "Hello test" {
 		t.Errorf("expected %q, got %q", "Hello test", result)
 	}
@@ -62,7 +71,7 @@ func TestSubstituteString(t *testing.T) {
 
 func TestSubstituteInt(t *testing.T) {
 	vars := Vars{"count": 42}
-	result := Substitute("Count: {{count}}", vars)
+	result, _ := Substitute("Count: {{count}}", vars)
 	if result != "Count: 42" {
 		t.Errorf("expected %q, got %q", "Count: 42", result)
 	}
@@ -70,7 +79,7 @@ func TestSubstituteInt(t *testing.T) {
 
 func TestSubstituteFloat(t *testing.T) {
 	vars := Vars{"rate": 3.14159}
-	result := Substitute("Rate: {{rate}}", vars)
+	result, _ := Substitute("Rate: {{rate}}", vars)
 	if result != "Rate: 3.14159" {
 		t.Errorf("expected %q, got %q", "Rate: 3.14159", result)
 	}
@@ -79,12 +88,12 @@ func TestSubstituteFloat(t *testing.T) {
 func TestSubstituteBool(t *testing.T) {
 	vars := Vars{"enabled": true, "disabled": false}
 
-	result1 := Substitute("Enabled: {{enabled}}", vars)
+	result1, _ := Substitute("Enabled: {{enabled}}", vars)
 	if result1 != "Enabled: true" {
 		t.Errorf("expected %q, got %q", "Enabled: true", result1)
 	}
 
-	result2 := Substitute("Disabled: {{disabled}}", vars)
+	result2, _ := Substitute("Disabled: {{disabled}}", vars)
 	if result2 != "Disabled: false" {
 		t.Errorf("expected %q, got %q", "Disabled: false", result2)
 	}
@@ -92,7 +101,7 @@ func TestSubstituteBool(t *testing.T) {
 
 func TestSubstituteFloatWholeNumber(t *testing.T) {
 	vars := Vars{"count": 42.0}
-	result := Substitute("Count: {{count}}", vars)
+	result, _ := Substitute("Count: {{count}}", vars)
 	if result != "Count: 42" {
 		t.Errorf("expected whole number format %q, got %q", "Count: 42", result)
 	}
@@ -145,7 +154,7 @@ func TestSubstituteMultipleInLine(t *testing.T) {
 		"first": "John",
 		"last":  "Doe",
 	}
-	result := Substitute("{{first}} {{last}}", vars)
+	result, _ := Substitute("{{first}} {{last}}", vars)
 	if result != "John Doe" {
 		t.Errorf("expected %q, got %q", "John Doe", result)
 	}
@@ -153,8 +162,20 @@ func TestSubstituteMultipleInLine(t *testing.T) {
 
 func TestSubstituteNoVariables(t *testing.T) {
 	vars := Vars{"name": "test"}
-	result := Substitute("No variables here", vars)
+	result, _ := Substitute("No variables here", vars)
 	if result != "No variables here" {
 		t.Errorf("expected unchanged content, got %q", result)
+	}
+}
+
+func TestSubstituteMultipleUnresolved(t *testing.T) {
+	vars := Vars{}
+	content := "{{foo}} and {{bar}} and {{foo}}"
+	result, unresolved := Substitute(content, vars)
+	if result != "{{foo}} and {{bar}} and {{foo}}" {
+		t.Errorf("expected unchanged content, got %q", result)
+	}
+	if len(unresolved) != 3 {
+		t.Errorf("expected 3 unresolved vars, got %d: %v", len(unresolved), unresolved)
 	}
 }

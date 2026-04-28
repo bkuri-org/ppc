@@ -33,6 +33,14 @@ digraph ppc {
     "contracts/markdown";
   }
 
+  subgraph cluster_5_guardrails {
+    label="guardrails";
+    "guardrails/forbidden_patterns";
+    "guardrails/snake_case";
+    "guardrails/tdd";
+    "guardrails/unsafe_commands";
+  }
+
 
   "traits/conservative" [style="dashed", color="red"];
   "traits/creative" [style="dashed", color="red"];
@@ -40,6 +48,10 @@ digraph ppc {
   "traits/verbose" [style="dashed", color="red"];
   "policies/revisions" [style="dashed", color="red"];
   "policies/self_score" [style="dashed", color="red"];
+  "guardrails/forbidden_patterns" [style="dashed", color="red"];
+  "guardrails/snake_case" [style="dashed", color="red"];
+  "guardrails/tdd" [style="dashed", color="red"];
+  "guardrails/unsafe_commands" [style="dashed", color="red"];
 
   "base" [shape="box", style="bold"];
   "modes/build" [shape="box", style="bold"];

@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/bkuri/ppc/internal/loader"
@@ -313,7 +314,7 @@ func TestRunMaxDepth(t *testing.T) {
 		if v.Rule == "max_depth" {
 			found = true
 			if v.Module == "traits/deep1" {
-				if !contains(v.Message, "chain =") {
+				if !strings.Contains(v.Message, "chain =") {
 					t.Error("max_depth violation should include chain")
 				}
 			}
@@ -322,19 +323,6 @@ func TestRunMaxDepth(t *testing.T) {
 	if !found {
 		t.Error("expected max_depth violation")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestMergeConfig(t *testing.T) {
@@ -351,7 +339,7 @@ func TestMergeConfig(t *testing.T) {
 
 	t.Run("file defaults when CLI is zero", func(t *testing.T) {
 		cli := Config{}
-		merged := MergeConfig(file, cli)
+		merged := MergeConfig(file, cli, CLISet{})
 		if merged.MaxWords != 2000 {
 			t.Errorf("MaxWords = %d, want 2000", merged.MaxWords)
 		}
@@ -371,7 +359,7 @@ func TestMergeConfig(t *testing.T) {
 
 	t.Run("CLI overrides file defaults", func(t *testing.T) {
 		cli := Config{MaxWords: 5000}
-		merged := MergeConfig(file, cli)
+		merged := MergeConfig(file, cli, CLISet{MaxWords: true})
 		if merged.MaxWords != 5000 {
 			t.Errorf("MaxWords = %d, want 5000", merged.MaxWords)
 		}
@@ -383,7 +371,7 @@ func TestMergeConfig(t *testing.T) {
 	t.Run("CLI can enable forbid empty body", func(t *testing.T) {
 		file := model.LintConfig{ForbidEmptyBody: false}
 		cli := Config{ForbidEmptyBody: true}
-		merged := MergeConfig(file, cli)
+		merged := MergeConfig(file, cli, CLISet{})
 		if !merged.ForbidEmptyBody {
 			t.Error("ForbidEmptyBody should be true (CLI enabled)")
 		}
@@ -391,7 +379,7 @@ func TestMergeConfig(t *testing.T) {
 
 	t.Run("CLI tags override file tags", func(t *testing.T) {
 		cli := Config{RequireTags: []string{"tone:*"}}
-		merged := MergeConfig(file, cli)
+		merged := MergeConfig(file, cli, CLISet{})
 		if len(merged.RequireTags) != 1 || merged.RequireTags[0] != "tone:*" {
 			t.Errorf("RequireTags = %v, want [tone:*]", merged.RequireTags)
 		}
@@ -403,7 +391,7 @@ func TestMergeConfig(t *testing.T) {
 				{Match: "FIXME", Reason: "custom"},
 			},
 		}
-		merged := MergeConfig(file, cli)
+		merged := MergeConfig(file, cli, CLISet{})
 		if len(merged.ForbidContentPatterns) != 1 {
 			t.Errorf("ForbidContentPatterns count = %d, want 1", len(merged.ForbidContentPatterns))
 		}
@@ -528,7 +516,7 @@ func TestRunForbidContent(t *testing.T) {
 
 		found := false
 		for _, v := range result.Violations {
-			if v.Rule == "forbid_content" && contains(v.Message, "invalid pattern") {
+			if v.Rule == "forbid_content" && strings.Contains(v.Message, "invalid pattern") {
 				found = true
 				break
 			}
@@ -582,7 +570,7 @@ func TestResolveScope(t *testing.T) {
 func TestMergeConfigEmptyFile(t *testing.T) {
 	file := model.LintConfig{}
 	cli := Config{MaxWords: 5000}
-	merged := MergeConfig(file, cli)
+	merged := MergeConfig(file, cli, CLISet{MaxWords: true})
 	if merged.MaxWords != 5000 {
 		t.Errorf("MaxWords = %d, want 5000", merged.MaxWords)
 	}

@@ -3,6 +3,7 @@ package compile
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 
 	"github.com/bkuri/ppc/internal/loader"
@@ -13,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Compile(opts CompileOptions) (string, CompileMeta, interface{}) {
+func Compile(opts CompileOptions) (string, CompileMeta, error) {
 	modByID, err := loader.LoadModules(opts.PromptsDir)
 	if err != nil {
 		return "", CompileMeta{}, err
@@ -50,16 +51,21 @@ func Compile(opts CompileOptions) (string, CompileMeta, interface{}) {
 
 	sortedMods := resolver.SortModules(mods)
 
-	out := render.Render(sortedMods, vars)
+	out, unresolved := render.Render(sortedMods, vars)
+
+	for _, u := range unresolved {
+		fmt.Fprintf(os.Stderr, "warning: unresolved variable: %s\n", u)
+	}
 
 	h := sha256.Sum256([]byte(out))
 	hash := hex.EncodeToString(h[:])
 
 	meta := CompileMeta{
-		SelectedIDs: selectedIDs,
-		ClosureIDs:  closureIDs,
-		Order:       order,
-		Hash:        hash,
+		SelectedIDs:    selectedIDs,
+		ClosureIDs:     closureIDs,
+		Order:          order,
+		Hash:           hash,
+		UnresolvedVars: unresolved,
 	}
 
 	return out, meta, nil
@@ -84,6 +90,9 @@ func buildSelectedIDs(opts CompileOptions) []string {
 		"contracts/" + opts.Contract,
 	}
 	selectedIDs = append(selectedIDs, opts.Traits...)
+	for _, g := range opts.Guardrails {
+		selectedIDs = append(selectedIDs, "guardrails/"+g)
+	}
 	return selectedIDs
 }
 

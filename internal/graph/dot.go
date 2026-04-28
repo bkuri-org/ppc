@@ -22,7 +22,7 @@ type Edge struct {
 // - edges sorted lexicographically (source, then target)
 // - attribute ordering consistent (shape, style, color)
 // - subgraph names stable (cluster_0_base, cluster_1_modes, etc.)
-func BuildDOT(modByID map[string]*model.Module, rules *model.Rules, reachable map[string]bool) string {
+func BuildDOT(modByID map[string]*model.Module, _ *model.Rules, reachable map[string]bool) string {
 	sortedIDs := sortedModuleIDs(modByID)
 	byLayer := layerSubgraphs(sortedIDs, modByID)
 	edges := collectEdges(sortedIDs, modByID)
@@ -31,10 +31,10 @@ func BuildDOT(modByID map[string]*model.Module, rules *model.Rules, reachable ma
 	buf.WriteString("digraph ppc {\n")
 	buf.WriteString("  rankdir=LR;\n\n")
 
-	for layerIdx := 0; layerIdx <= 4; layerIdx++ {
+	for layerIdx := 0; layerIdx < len(model.LayerOrder); layerIdx++ {
 		if ids, ok := byLayer[layerIdx]; ok && len(ids) > 0 {
-			clusterName := clusterNameFromLayer(layerIdx)
-			layerLabel := layerLabelFromIndex(layerIdx)
+			clusterName := fmt.Sprintf("cluster_%d_%s", layerIdx, model.LayerName(layerIdx))
+			layerLabel := model.LayerName(layerIdx)
 			buf.WriteString(fmt.Sprintf("  subgraph %s {\n", clusterName))
 			buf.WriteString(fmt.Sprintf("    label=\"%s\";\n", layerLabel))
 
@@ -121,21 +121,4 @@ func isEntrypoint(id string) bool {
 	return id == "base" ||
 		strings.HasPrefix(id, "modes/") ||
 		strings.HasPrefix(id, "contracts/")
-}
-
-func clusterNameFromLayer(idx int) string {
-	names := []string{"cluster_0_base", "cluster_1_modes", "cluster_2_traits",
-		"cluster_3_policies", "cluster_4_contracts"}
-	if idx >= 0 && idx < len(names) {
-		return names[idx]
-	}
-	return "cluster_unknown"
-}
-
-func layerLabelFromIndex(idx int) string {
-	labels := []string{"base", "modes", "traits", "policies", "contracts"}
-	if idx >= 0 && idx < len(labels) {
-		return labels[idx]
-	}
-	return "unknown"
 }

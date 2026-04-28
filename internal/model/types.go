@@ -64,7 +64,14 @@ type Module struct {
 }
 
 // LayerOrder defines the canonical layer precedence
-var LayerOrder = []string{"base", "modes", "traits", "policies", "contracts"}
+var LayerOrder = []string{"base", "modes", "traits", "policies", "contracts", "guardrails"}
+
+func LayerName(index int) string {
+	if index < 0 || index >= len(LayerOrder) {
+		return "unknown"
+	}
+	return LayerOrder[index]
+}
 
 // LayerIndexFromPath returns the layer index for a module path
 func LayerIndexFromPath(p string) int {

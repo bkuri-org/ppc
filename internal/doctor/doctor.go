@@ -58,56 +58,8 @@ func RunDoctor(promptsDir string, strict bool, jsonOut bool, statsRequested bool
 	}
 
 	// Check for circular dependencies
-	const (
-		unvisited = 0
-		visiting  = 1
-		done      = 2
-	)
-	state := map[string]int{}
-	stack := []string{}
-	pos := map[string]int{}
-
-	var visit func(id string) error
-	visit = func(id string) error {
-		switch state[id] {
-		case done:
-			return nil
-		case visiting:
-			i := pos[id]
-			cycle := append(append([]string{}, stack[i:]...), id)
-			return fmt.Errorf("circular requires: %s", strings.Join(cycle, " -> "))
-		}
-		state[id] = visiting
-		pos[id] = len(stack)
-		stack = append(stack, id)
-
-		reqs := append([]string{}, modByID[id].Front.Requires...)
-		sort.Strings(reqs)
-		for _, r := range reqs {
-			if _, ok := modByID[r]; !ok {
-				continue
-			}
-			if err := visit(r); err != nil {
-				return err
-			}
-		}
-
-		stack = stack[:len(stack)-1]
-		delete(pos, id)
-		state[id] = done
-		return nil
-	}
-
-	ids := make([]string, 0, len(modByID))
-	for id := range modByID {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	for _, id := range ids {
-		if err := visit(id); err != nil {
-			errs = append(errs, err.Error())
-			break
-		}
+	if err := resolver.DetectCycles(modByID); err != nil {
+		errs = append(errs, err.Error())
 	}
 
 	// Validate exclusive groups

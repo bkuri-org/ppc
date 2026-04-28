@@ -12,7 +12,6 @@ import (
 	"github.com/bkuri/ppc/internal/doctor"
 	"github.com/bkuri/ppc/internal/lint"
 	"github.com/bkuri/ppc/internal/loader"
-	"github.com/bkuri/ppc/internal/model"
 )
 
 // dief prints error to stderr and exits
@@ -59,75 +58,14 @@ func explainOutput(meta compile.CompileMeta) {
 	}
 }
 
-func runExplore(args []string, promptsDir string) {
-	fs := flag.NewFlagSet("explore", flag.ExitOnError)
-
-	profile := fs.String("profile", "", "load preset configuration (e.g., ship)")
-	conservative := fs.Bool("conservative", false, "include traits/conservative")
-	creative := fs.Bool("creative", false, "include traits/creative")
-	terse := fs.Bool("terse", false, "include traits/terse")
-	verbose := fs.Bool("verbose", false, "include traits/verbose")
-	revisions := fs.Int("revisions", -1, "revision budget (enables policies/revisions)")
-	contract := fs.String("contract", "markdown", "contract module (code|markdown)")
-	varsFile := fs.String("vars", "", "path to YAML file with variable definitions")
-	outPath := fs.String("out", "", "write output to file")
-	explain := fs.Bool("explain", false, "explain resolution steps to stderr")
-	withHash := fs.Bool("hash", false, "prepend prompt-id hash header")
-	proDir := fs.String("prompts", promptsDir, "prompts directory")
-
-	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, `usage:
-  ppc explore [flags]
-
-Explore mode generates a prompt for exploration tasks.
-
-flags:`)
-		fs.PrintDefaults()
-	}
-
-	fs.Parse(args)
-
-	cfg := &ResolvedConfig{}
-	if *profile != "" {
-		profCfg, err := NewResolvedConfigFromProfile(*profile)
-		if err != nil {
-			dief("profile error: %v", err)
-		}
-		cfg = profCfg
-	} else {
-		defaults := NewResolvedConfigFromDefaults("explore", *contract)
-		cfg = &defaults
-	}
-
-	cfg, err := cfg.ApplyCLIOverrides(conservative, creative, terse, verbose, revisions, contract, varsFile)
-	if err != nil {
-		dief("merge error: %v", err)
-	}
-
-	cfg.PromptsDir = *proDir
-
-	opts := cfg.ToCompileOptions()
-
-	out, meta, _ := compile.Compile(opts)
-
-	if *withHash {
-		out = fmt.Sprintf("<!-- prompt-id: sha256:%s -->\n\n%s", meta.Hash, out)
-	}
-
-	if *explain {
-		explainOutput(meta)
-	}
-
-	if *outPath != "" {
-		if err := os.WriteFile(*outPath, []byte(out), 0o644); err != nil {
-			dief("failed to write %s: %v", *outPath, err)
-		}
-	}
-	fmt.Print(out)
+var modeDescription = map[string]string{
+	"explore": "Explore mode generates a prompt for exploration tasks.",
+	"build":   "Build mode generates a prompt for building/implementing features.",
+	"ship":    "Ship mode generates a prompt for release/deployment tasks.",
 }
 
-func runBuild(args []string, promptsDir string) {
-	fs := flag.NewFlagSet("build", flag.ExitOnError)
+func runMode(mode string, args []string, promptsDir string) int {
+	fs := flag.NewFlagSet(mode, flag.ExitOnError)
 
 	profile := fs.String("profile", "", "load preset configuration (e.g., ship)")
 	conservative := fs.Bool("conservative", false, "include traits/conservative")
@@ -136,6 +74,7 @@ func runBuild(args []string, promptsDir string) {
 	verbose := fs.Bool("verbose", false, "include traits/verbose")
 	revisions := fs.Int("revisions", -1, "revision budget (enables policies/revisions)")
 	contract := fs.String("contract", "markdown", "contract module (code|markdown)")
+	guardrails := fs.String("guardrails", "", "comma-separated guardrail modules (e.g., tdd,snake_case; use \"all\" for all guardrails)")
 	varsFile := fs.String("vars", "", "path to YAML file with variable definitions")
 	outPath := fs.String("out", "", "write output to file")
 	explain := fs.Bool("explain", false, "explain resolution steps to stderr")
@@ -143,12 +82,7 @@ func runBuild(args []string, promptsDir string) {
 	proDir := fs.String("prompts", promptsDir, "prompts directory")
 
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, `usage:
-  ppc build [flags]
-
-Build mode generates a prompt for building/implementing features.
-
-flags:`)
+		fmt.Fprintf(os.Stderr, "usage:\n  ppc %s [flags]\n\n%s\n\nflags:\n", mode, modeDescription[mode])
 		fs.PrintDefaults()
 	}
 
@@ -162,20 +96,24 @@ flags:`)
 		}
 		cfg = profCfg
 	} else {
-		defaults := NewResolvedConfigFromDefaults("build", *contract)
+		defaults := NewResolvedConfigFromDefaults(mode, *contract)
 		cfg = &defaults
 	}
 
-	cfg, err := cfg.ApplyCLIOverrides(conservative, creative, terse, verbose, revisions, contract, varsFile)
+	// Set PromptsDir before ApplyCLIOverrides so guardrails discovery works
+	cfg.PromptsDir = *proDir
+
+	cfg, err := cfg.ApplyCLIOverrides(conservative, creative, terse, verbose, revisions, contract, varsFile, guardrails)
 	if err != nil {
 		dief("merge error: %v", err)
 	}
 
-	cfg.PromptsDir = *proDir
-
 	opts := cfg.ToCompileOptions()
 
-	out, meta, _ := compile.Compile(opts)
+	out, meta, err := compile.Compile(opts)
+	if err != nil {
+		dief("compile error: %v", err)
+	}
 
 	if *withHash {
 		out = fmt.Sprintf("<!-- prompt-id: sha256:%s -->\n\n%s", meta.Hash, out)
@@ -191,73 +129,7 @@ flags:`)
 		}
 	}
 	fmt.Print(out)
-}
-
-func runShip(args []string, promptsDir string) {
-	fs := flag.NewFlagSet("ship", flag.ExitOnError)
-
-	profile := fs.String("profile", "", "load preset configuration (e.g., ship)")
-	conservative := fs.Bool("conservative", false, "include traits/conservative")
-	creative := fs.Bool("creative", false, "include traits/creative")
-	terse := fs.Bool("terse", false, "include traits/terse")
-	verbose := fs.Bool("verbose", false, "include traits/verbose")
-	revisions := fs.Int("revisions", -1, "revision budget (enables policies/revisions)")
-	contract := fs.String("contract", "markdown", "contract module (code|markdown)")
-	varsFile := fs.String("vars", "", "path to YAML file with variable definitions")
-	outPath := fs.String("out", "", "write output to file")
-	explain := fs.Bool("explain", false, "explain resolution steps to stderr")
-	withHash := fs.Bool("hash", false, "prepend prompt-id hash header")
-	proDir := fs.String("prompts", promptsDir, "prompts directory")
-
-	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, `usage:
-  ppc ship [flags]
-
-Ship mode generates a prompt for release/deployment tasks.
-
-flags:`)
-		fs.PrintDefaults()
-	}
-
-	fs.Parse(args)
-
-	cfg := &ResolvedConfig{}
-	if *profile != "" {
-		profCfg, err := NewResolvedConfigFromProfile(*profile)
-		if err != nil {
-			dief("profile error: %v", err)
-		}
-		cfg = profCfg
-	} else {
-		defaults := NewResolvedConfigFromDefaults("ship", *contract)
-		cfg = &defaults
-	}
-
-	cfg, err := cfg.ApplyCLIOverrides(conservative, creative, terse, verbose, revisions, contract, varsFile)
-	if err != nil {
-		dief("merge error: %v", err)
-	}
-
-	cfg.PromptsDir = *proDir
-
-	opts := cfg.ToCompileOptions()
-
-	out, meta, _ := compile.Compile(opts)
-
-	if *withHash {
-		out = fmt.Sprintf("<!-- prompt-id: sha256:%s -->\n\n%s", meta.Hash, out)
-	}
-
-	if *explain {
-		explainOutput(meta)
-	}
-
-	if *outPath != "" {
-		if err := os.WriteFile(*outPath, []byte(out), 0o644); err != nil {
-			dief("failed to write %s: %v", *outPath, err)
-		}
-	}
-	fmt.Print(out)
+	return 0
 }
 
 func printGlobalUsage() {
@@ -277,10 +149,12 @@ func printGlobalUsage() {
   --help     Show this help message
 
  examples:
-  ppc explore --conservative --revisions 1 --contract markdown
-  ppc build --conservative --revisions 1 --contract code --explain
-  ppc ship --creative --out AGENTS.md --hash
-  ppc doctor --strict --json
+	ppc explore --conservative --revisions 1 --contract markdown
+	ppc build --conservative --revisions 1 --contract code --explain
+	ppc ship --creative --out AGENTS.md --hash
+	ppc explore --guardrails tdd,snake_case
+	ppc build --guardrails all
+	ppc doctor --strict --json
   ppc lint --max-words 2000 --require-tags domain:*
 
  run 'ppc <subcommand> --help' for subcommand-specific options`)
@@ -339,12 +213,8 @@ func main() {
 
 	// Dispatch to subcommand
 	switch subcommand {
-	case "explore":
-		runExplore(args, promptsDir)
-	case "build":
-		runBuild(args, promptsDir)
-	case "ship":
-		runShip(args, promptsDir)
+	case "explore", "build", "ship":
+		os.Exit(runMode(subcommand, args, promptsDir))
 	case "doctor":
 		fs := flag.NewFlagSet("doctor", flag.ExitOnError)
 		strict := fs.Bool("strict", false, "treat warnings as errors")
@@ -390,6 +260,11 @@ flags:`)
 		}
 		fs.Parse(args)
 
+		visited := map[string]bool{}
+		fs.Visit(func(f *flag.Flag) {
+			visited[f.Name] = true
+		})
+
 		cliCfg := lint.Config{
 			MaxWords:        *maxWords,
 			MaxLines:        *maxLines,
@@ -408,12 +283,19 @@ flags:`)
 			}
 		}
 
-		fileLint := model.LintConfig{}
-		if rulesIf, _ := loader.LoadRules(*proDir); rulesIf != nil {
-			fileLint = rulesIf.Lint
+		rules, err := loader.LoadRules(*proDir)
+		if err != nil {
+			dief("load rules: %v", err)
 		}
+		fileLint := rules.Lint
 
-		cfg := lint.MergeConfig(fileLint, cliCfg)
+		cfg := lint.MergeConfig(fileLint, cliCfg, lint.CLISet{
+			MaxWords:       visited["max-words"],
+			MaxLines:       visited["max-lines"],
+			MaxModules:     visited["max-modules"],
+			MaxModuleWords: visited["max-module-words"],
+			MaxDepth:       visited["max-depth"],
+		})
 
 		result, err := lint.Run(*proDir, cfg)
 		if err != nil {

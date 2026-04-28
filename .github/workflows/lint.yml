@@ -18,7 +18,7 @@ jobs:
         run: go build -o ppc ./cmd/build-prompt
 
       - name: Run tests
-        run: go test -v ./... -run "^(TestGolden|TestBasic|TestOrdering|TestKeyed)"
+        run: go test -v ./...
 
       - name: Check formatting
         run: |
