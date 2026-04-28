@@ -11,7 +11,7 @@ Release verification ensures:
 
 1. Download release and checksums:
    ```bash
-   VERSION=v0.2.0
+   VERSION=v0.3.1
    curl -fsSL -O https://github.com/bkuri/ppc/releases/download/${VERSION}/ppc_${VERSION}_linux_amd64.tar.gz
    curl -fsSL -O https://github.com/bkuri/ppc/releases/download/${VERSION}/checksums.txt
    ```
@@ -21,7 +21,7 @@ Release verification ensures:
    sha256sum -c --ignore-missing checksums.txt
    ```
 
-Expected output: `ppc_v0.2.0_linux_amd64.tar.gz: OK`
+Expected output: `ppc_v0.3.1_linux_amd64.tar.gz: OK`
 
 ## Manual Verification
 
@@ -34,7 +34,7 @@ If `sha256sum` not available:
 
 2. Compute and compare:
    ```bash
-   sha256sum ppc_v0.2.0_linux_amd64.tar.gz
+   sha256sum ppc_v0.3.1_linux_amd64.tar.gz
    ```
 
 3. Compare output with checksums.txt
@@ -47,6 +47,4 @@ If verification fails:
 3. Verify checksums again
 4. Report issue: https://github.com/bkuri/ppc/issues
 
-## PGP Signatures (Future)
 
-Future releases may include PGP signatures for cryptographic verification.

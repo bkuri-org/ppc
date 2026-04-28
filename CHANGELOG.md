@@ -5,6 +5,49 @@ All notable changes to PPC are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] — 2026-04-28
+
+### Changed
+
+- **Docs**: Curated README, CHANGELOG, and docs/ — removed LLM-isms, emojis, stale version references, and placeholder sections
+- **Docs**: Removed orphaned MaksiTrader PRD from docs/requirements/
+
+## [0.5.0] — 2026-04-17
+
+### Added
+
+- **Guardrails layer**: Four modules (tdd, unsafe_commands, snake_case, forbidden_patterns) with `--guardrails` flag supporting comma-separated names and `all`
+- **Tests**: 73 unit tests for core packages (loader, compile, resolver, render, model)
+
+### Fixed
+
+- Critical bug fixes from go-standards-audit: error propagation, `interface{}` to `error` type safety
+- Eliminated code duplication across compile, resolver, doctor, graph
+
+### Changed
+
+- Added golangci-lint config
+- Removed `dist/` from git tracking
+- `SrcError` now implements `Unwrap()` for error chain support
+
+## [0.4.0] — 2026-04-01
+
+### Added
+
+- **Persistent lint config**: `lint:` key in `rules.yml` (CLI flags override file defaults)
+- **Path-scoped rules**: Glob-based rule targeting per module
+- **Content lint rules**: `forbid_content_patterns` with regex validation
+- **Beads issue tracking**: Initialized bead tracking for the project
+
+### Fixed
+
+- Restored lint files after rebase conflict
+
+### Changed
+
+- Added gofmt pre-commit hook
+- gofmt formatting applied project-wide
+
 ## [0.3.2] — 2026-03-12
 
 ### Added
@@ -73,14 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**: Refined README.md with better navigation and example references
 - **Cleanup**: Removed temporary phase documentation files from docs/
 
-### Fixed
-
-- None (all fixes are in earlier releases)
-
-### Deprecated
-
-- None (stable release)
-
 ## [0.1.0] — 2025-12-15
 
 ### Added
@@ -136,6 +171,9 @@ See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
 
 - **v0.1.x**: Baseline feature completeness
 - **v0.2.x**: Examples and community infrastructure
+- **v0.3.x**: Lint command and variable substitution
+- **v0.4.x**: Persistent config, path-scoped rules, guardrails
+- **v0.5.x**: Guardrails refinement and audit fixes
 - **v1.0.0**: Stable, production-ready release
 - **v1.x+**: Feature additions and refinements
 

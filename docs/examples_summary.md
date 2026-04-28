@@ -6,63 +6,63 @@ All 5 examples from `docs/examples_prd.md` have been successfully created and va
 
 | # | Name | Complexity | Modules | Status |
 |---|------|------------|--------|
-| 01 | Basic Prompt Composition | ⭐ | 5 | ✅ Validated |
-| 02 | Team Style Guide Policy | ⭐⭐ | 7 | ✅ Validated |
-| 03 | Knowledge Sharing Policy | ⭐⭐⭐ | 7 | ✅ Validated |
-| 04 | Product PRD Review Flow | ⭐⭐⭐⭐ | 7 | ✅ Validated |
-| 05 | RAG Governance Policy | ⭐⭐⭐⭐⭐ | 7 | ✅ Validated |
+| 01 | Basic Prompt Composition | 1 | 5 | Validated |
+| 02 | Team Style Guide Policy | 2 | 7 | Validated |
+| 03 | Knowledge Sharing Policy | 3 | 7 | Validated |
+| 04 | Product PRD Review Flow | 4 | 7 | Validated |
+| 05 | RAG Governance Policy | 5 | 7 | Validated |
 
 ## Features Demonstrated
 
 ### Example 01 — Basic Prompt Composition
-- ✅ PPC as prompt compiler (replaces giant prompt files)
-- ✅ Modular behavior composition (base, mode, traits, contracts)
-- ✅ Deterministic ordering
-- ✅ Exclusive tag groups (risk, output)
-- ✅ Profile-based execution
+- PPC as prompt compiler (replaces giant prompt files)
+- Modular behavior composition (base, mode, traits, contracts)
+- Deterministic ordering
+- Exclusive tag groups (risk, output)
+- Profile-based execution
 
 **Profiles:**
 - `explore-creative` — exploration with creative trait
 - `explore-conservative` — exploration with conservative trait
 
 ### Example 02 — Team Style Guide Policy
-- ✅ Organization-wide behavioral policy
-- ✅ Tone enforcement (terse vs verbose)
-- ✅ Formatting standards
-- ✅ Exclusive tag groups (tone, output)
+- Organization-wide behavioral policy
+- Tone enforcement (terse vs verbose)
+- Formatting standards
+- Exclusive tag groups (tone, output)
 
 **Profiles:**
 - `default` — terse + markdown
 - `design-reviews` — verbose + markdown
 
 ### Example 03 — Knowledge Sharing Policy
-- ✅ Conversational governance
-- ✅ 7-day conversation windows
-- ✅ Requirements traceability (PRD citations)
-- ✅ RAG source attribution
-- ✅ Contracts as process definition
+- Conversational governance
+- 7-day conversation windows
+- Requirements traceability (PRD citations)
+- RAG source attribution
+- Contracts as process definition
 
 **Profiles:**
 - `knowledge-sharing` — complete governance setup
 
-### Example 04 — Product PRD Review Flow ⭐ **Variables Introduced Here**
-- ✅ Multi-stage review (exploration, definition, ship)
-- ✅ Artifact-driven development
-- ✅ Variable substitution (`{{product_name}}`, `{{target_user}}`, `{{risk_level}}`)
-- ✅ Heavy contract module (60-80 lines)
-- ✅ Acceptance criteria, non-goals, risk assessment
+### Example 04 — Product PRD Review Flow (Variables Introduced Here)
+- Multi-stage review (exploration, definition, ship)
+- Artifact-driven development
+- Variable substitution (`{{product_name}}`, `{{target_user}}`, `{{risk_level}}`)
+- Heavy contract module (60-80 lines)
+- Acceptance criteria, non-goals, risk assessment
 
 **Profiles:**
 - `explore` — NewFeature, Developers, low risk
 - `ship` — ProductionRelease, Customers, high risk
 
 ### Example 05 — RAG Governance Policy
-- ✅ Enterprise AI governance
-- ✅ Multiple exclusive groups (audience, output)
-- ✅ Source ranking (5-level hierarchy)
-- ✅ Citation format requirements (`[source-id:confidence:timestamp]`)
-- ✅ Escalation rules (mandatory vs conditional)
-- ✅ Heavy contract module (60-80 lines)
+- Enterprise AI governance
+- Multiple exclusive groups (audience, output)
+- Source ranking (5-level hierarchy)
+- Citation format requirements (`[source-id:confidence:timestamp]`)
+- Escalation rules (mandatory vs conditional)
+- Heavy contract module (60-80 lines)
 
 **Profiles:**
 - `internal` — full access, moderate escalation
@@ -174,19 +174,19 @@ All modules follow realistic, AGENTS.md-level content:
 - **Explicit constraints** — "You must not" and "You do" sections
 - **Anti-patterns** — Clear failure cases
 
-## Success Criteria ✅
+## Success Criteria
 
-✅ Users recognize their own problems immediately
-✅ Examples are fully self-contained
-✅ Each example demonstrates exactly one new conceptual idea
-✅ Complexity ramps progressively (⭐ → ⭐⭐⭐⭐⭐)
-✅ READMEs follow problem → solution → value structure
-✅ All examples pass `ppc doctor`
-✅ Variable substitution demonstrated (Example 04)
-✅ Multiple exclusive groups demonstrated (Example 05)
-✅ Sample output included (truncated)
-✅ Common failure modes documented
-✅ CI integration path clear
+- Users recognize their own problems immediately
+- Examples are fully self-contained
+- Each example demonstrates exactly one new conceptual idea
+- Complexity ramps progressively (1 to 5)
+- READMEs follow problem → solution → value structure
+- All examples pass `ppc doctor`
+- Variable substitution demonstrated (Example 04)
+- Multiple exclusive groups demonstrated (Example 05)
+- Sample output included (truncated)
+- Common failure modes documented
+- CI integration path clear
 
 ## Next Steps
 

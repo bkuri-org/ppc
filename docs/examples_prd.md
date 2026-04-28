@@ -9,11 +9,9 @@ Rather than explaining concepts abstractly, examples provide:
 - concrete, runnable prompt-policy repositories
 - realistic use cases users already recognize
 - increasing complexity through composition
-- copy‑paste starting points (“shortcuts”) for real projects
+- copy-paste starting points for real projects
 
-Examples are not documentation.
-
-They are **reference implementations**.
+Examples are reference implementations, not documentation.
 
 ---
 
@@ -302,11 +300,11 @@ profiles/client-facing.yml
 
 | Example | Complexity | New Concept |
 |------|------|------|
-| 01 | ⭐ | Composition |
-| 02 | ⭐⭐ | Policy enforcement |
-| 03 | ⭐⭐⭐ | Process governance |
-| 04 | ⭐⭐⭐⭐ | Product workflows |
-| 05 | ⭐⭐⭐⭐⭐ | Enterprise AI governance |
+| 01 | 1 | Composition |
+| 02 | 2 | Policy enforcement |
+| 03 | 3 | Process governance |
+| 04 | 4 | Product workflows |
+| 05 | 5 | Enterprise AI governance |
 
 Each example assumes mastery of the previous one.
 
@@ -337,13 +335,9 @@ The examples folder succeeds if:
 
 ---
 
-## North Star
+## Measure of Success
 
-Examples should make users say:
-
-> "Oh — this is exactly what we’ve been trying to do."
-
-If that reaction doesn’t happen, the example doesn’t belong here.
+Examples succeed when users recognize their own problems and can adapt an example for their use case. If an example doesn't map to real work, it doesn't belong here.
 
 ---
 

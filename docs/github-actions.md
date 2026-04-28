@@ -4,7 +4,7 @@ Automatically validate prompt modules in CI/CD pipelines.
 
 ---
 
-## Section 1: Download from Releases (Recommended)
+## Download from Releases (Recommended)
 
 **Advantages:**
 - No Go toolchain required in CI
@@ -27,7 +27,7 @@ jobs:
       - name: Install ppc
         run: |
           set -euo pipefail
-          VERSION=v0.2.0
+          VERSION=v0.3.1
           URL="https://github.com/bkuri/ppc/releases/download/${VERSION}/ppc_${VERSION}_linux_amd64.tar.gz"
           curl -fsSL -o ppc.tar.gz "$URL"
           tar -xzf ppc.tar.gz
@@ -45,7 +45,7 @@ jobs:
 
 ---
 
-## Section 2: Build from Source (Alternative)
+## Build from Source (Alternative)
 
 **Advantages:**
 - No release binary required
@@ -83,7 +83,7 @@ jobs:
 
 ---
 
-## Section 3: Optional Graph Integration
+## Optional Graph Integration
 
 Add dependency graph visualization to your artifacts:
 
@@ -106,17 +106,17 @@ Then manually:
 
 ---
 
-## Section 4: How to Pin Versions
+## How to Pin Versions
 
 ### Pin to release version
 
 \`\`\`yaml
       - name: Install ppc
         env:
-          VERSION: v0.2.0  # Pin to specific release
+          VERSION: v0.3.1  # Pin to specific release
 \`\`\`
 
-Update quarterly or when updating PPC version.
+Update when upgrading PPC.
 
 ### Pin to commit (build from source)
 
@@ -128,11 +128,11 @@ Update quarterly or when updating PPC version.
 
 ### Auto-update (not recommended)
 
-Replace \`v0.2.0\` with a branch name like \`main\`, but this sacrifices determinism.
+Replace \`v0.3.1\` with a branch name like \`main\`, but this sacrifices determinism.
 
 ---
 
-## Section 5: Example jq Checks
+## Example jq Checks
 
 Extract and validate report status:
 

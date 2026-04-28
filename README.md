@@ -78,14 +78,6 @@ cd ppc
 go build -o ppc ./cmd/build-prompt
 ```
 
-### Method 5: Arch Linux (Future)
-
-PKGBUILD available in `contrib/arch/PKGBUILD`.
-
-See [contrib/arch/README.md](contrib/arch/README.md) for build instructions.
-
----
-
 ## Versioning
 
 PPC follows semantic versioning: `vX.Y.Z`
@@ -102,8 +94,6 @@ go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.1
 Check for latest releases at:
 https://github.com/bkuri/ppc/releases
 
----
-
 ## Build
 
 ```bash
@@ -118,11 +108,11 @@ All examples are complete, runnable prompt-policy repositories that increase in 
 
 | # | Name | Complexity | What You'll Learn |
 |---|------|-----------|-------------------|
-| 01 | [Basic Prompt Composition](examples/01-basic-prompt) | ⭐ | Modular composition, deterministic ordering |
-| 02 | [Team Style Guide](examples/02-team-style-guide) | ⭐⭐ | Policy enforcement, exclusive groups |
-| 03 | [Knowledge Sharing Policy](examples/03-knowledge-sharing-policy) | ⭐⭐⭐ | Process governance, traceability |
-| 04 | [Product PRD Review](examples/04-product-prd-review) | ⭐⭐⭐⭐ | Multi-stage workflows, variable substitution |
-| 05 | [RAG Governance](examples/05-rag-governance-policy) | ⭐⭐⭐⭐⭐ | Enterprise governance, multiple exclusive groups |
+| 01 | [Basic Prompt Composition](examples/01-basic-prompt) | 1 | Modular composition, deterministic ordering |
+| 02 | [Team Style Guide](examples/02-team-style-guide) | 2 | Policy enforcement, exclusive groups |
+| 03 | [Knowledge Sharing Policy](examples/03-knowledge-sharing-policy) | 3 | Process governance, traceability |
+| 04 | [Product PRD Review](examples/04-product-prd-review) | 4 | Multi-stage workflows, variable substitution |
+| 05 | [RAG Governance](examples/05-rag-governance-policy) | 5 | Enterprise governance, multiple exclusive groups |
 
 Each example includes a README explaining the problem it solves and how to run it.
 
@@ -204,10 +194,7 @@ Each mode subcommand supports:
 - `prompts/` contains Markdown modules with optional YAML frontmatter.
 - `prompts/rules.yml` defines `exclusive_groups` for keyed tags (`group:value`).
 
-## Notes
-
-- Deterministic output: same inputs -> same output.
-- Fails loudly on: missing modules, tag conflicts, circular requires.
+Deterministic: same inputs produce same output. Fails loudly on missing modules, tag conflicts, and circular requires.
 
 ## Documentation
 

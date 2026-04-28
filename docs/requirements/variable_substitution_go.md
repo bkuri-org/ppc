@@ -6,9 +6,7 @@
 
 ---
 
-## Executive Summary
-
-Add nested variable substitution to PPC to support `{{object.property}}` syntax. Unlike the Python PRD which integrates with a specific application (MaksiTrader), this Go implementation focuses on the compiler core: loading variables from external files and substituting them deterministically.
+Nested variable substitution for `{{object.property}}` syntax. Variables load from external YAML/JSON files and substitute deterministically during compilation.
 
 ---
 
