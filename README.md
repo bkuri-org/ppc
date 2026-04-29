@@ -1,4 +1,4 @@
-# PPC — Prompt Policy Compiler (v0.3.1)
+# PPC — Prompt Policy Compiler
 
 PPC compiles small Markdown behavior modules into a single deterministic prompt (stdout-first).
 
@@ -7,8 +7,9 @@ PPC compiles small Markdown behavior modules into a single deterministic prompt 
 ## Quick Start
 
 ```bash
-# Install
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.1
+# Install (binary will be named "build-prompt" — rename after install)
+go install github.com/bkuri/ppc/cmd/build-prompt@latest
+mv ~/go/bin/build-prompt ~/go/bin/ppc
 
 # Compile a prompt
 ppc explore --creative --out my-prompt.md
@@ -26,8 +27,8 @@ ppc --list
 
 1. Download for your platform:
    ```bash
-   curl -fsSL -o ppc.tar.gz \
-     https://github.com/bkuri/ppc/releases/download/v0.3.1/ppc_v0.3.1_linux_amd64.tar.gz
+    curl -fsSL -o ppc.tar.gz \
+      https://github.com/bkuri/ppc/releases/latest/download/ppc_linux_amd64.tar.gz
    ```
 
 2. Extract and install:
@@ -50,25 +51,29 @@ Always verify release integrity:
 
 ```bash
 # Download checksums
-curl -fsSL -O https://github.com/bkuri/ppc/releases/download/v0.3.1/checksums.txt
+curl -fsSL -O https://github.com/bkuri/ppc/releases/latest/download/checksums.txt
 
 # Verify your downloaded archive
 sha256sum -c --ignore-missing checksums.txt
 ```
 
-Should output: `ppc_v0.3.1_linux_amd64.tar.gz: OK`
+Should output: `ppc_linux_amd64.tar.gz: OK`
 
 See [docs/verification.md](docs/verification.md) for detailed verification guide.
 
 ### Method 3: Go Install
 
-Pin to specific version for reproducibility:
+Pin to a specific version for reproducibility:
 
 ```bash
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.1
+go install github.com/bkuri/ppc/cmd/build-prompt@latest
 ```
 
-The binary installs to `$GOPATH/bin/ppc` (usually `~/go/bin/ppc`).
+Note: `go install` names the binary after the source directory (`build-prompt`), not the module name. Rename or symlink after install:
+
+```bash
+mv ~/go/bin/build-prompt ~/go/bin/ppc
+```
 
 ### Method 4: Build from Source
 
@@ -76,6 +81,7 @@ The binary installs to `$GOPATH/bin/ppc` (usually `~/go/bin/ppc`).
 git clone https://github.com/bkuri/ppc.git
 cd ppc
 go build -o ppc ./cmd/build-prompt
+sudo mv ppc /usr/local/bin/
 ```
 
 ## Versioning
@@ -86,9 +92,9 @@ PPC follows semantic versioning: `vX.Y.Z`
 - Y: Minor version (new features, backward compatible)
 - Z: Patch version (bug fixes)
 
-To install a specific version, use:
+Use `@latest` for the newest release, or pin to a specific version with `@vX.Y.Z`:
 ```bash
-go install github.com/bkuri/ppc/cmd/build-prompt@v0.3.1
+go install github.com/bkuri/ppc/cmd/build-prompt@latest
 ```
 
 Check for latest releases at:
